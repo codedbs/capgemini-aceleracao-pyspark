@@ -12,7 +12,6 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 
 ### defining schema ###
 
-
 schema_communities_crime = StructType([ 
     StructField('state', IntegerType(), True),
     StructField('county', IntegerType(), True),
@@ -144,58 +143,111 @@ schema_communities_crime = StructType([
     StructField('ViolentCrimesPerPop', FloatType(), True),
      ])
 
+# checking how many null values ​​there are - considering null by the label '?'
+def quantity_null(df):
+	return df.select([count(when(col(c)=='?', c)).alias(c) for c in df.columns]).show(vertical=True)
+
+### searching null values ###
+
+def check_is_null(df):
+    return (F.col(df).isNull())
 
 
-###  data cleaning ###
+###  answering some business questions ###
 
-def question_1_police_operating_budget (df):
-	(df.where(F.col("PolicOperBudg")!='?')
-	.groupBy('communityname')
-	.agg(
-			F.sum(
-				F.col("PolicOperBudg"))
-	.alias("MaxSumPolicOperBudg"))
-	.orderBy(F.col("MaxSumPolicOperBudg")
-	.desc())
+def question_1_police_budget(df):
+
+	df = (df.withColumn("PolicOperBudg", F.when(check_is_null('PolicOperBudg'), 0)
+							.otherwise(F.col("PolicOperBudg")))
+			)
+	(df.groupBy(F.col('state'), F.col('communityname'))
+	.agg(F.round(F.sum(F.col('PolicOperBudg')), 2).alias('PoliceBudget'))
+	.orderBy(F.col('PoliceBudget').desc())
 	.show())
 
-def question_2_violentcrimes_percommunity (df):
-	(df.where(F.col("ViolentCrimesPerPop")!='?')
-	.groupBy('communityname')
-	.agg(
-		F.round(
-			F.sum(
-				F.col("ViolentCrimesPerPop")),2)
-	.alias("MaxSumViolentCrimeperCommunity"))
-	.orderBy(F.col("MaxSumViolentCrimeperCommunity")
-	.desc())
+def question_2_violentcrimes_percommunity(df):
+
+	df = (df.withColumn('ViolentCrimesPerPop', F.when(check_is_null('ViolentCrimesPerPop'), 0)
+							.otherwise(F.col('ViolentCrimesPerPop')))
+		)
+	(df.groupBy(F.col('state'), F.col('communityname'))
+	.agg(F.round(F.sum(F.col('ViolentCrimesPerPop')), 2).alias('ViolentCrimes'))
+	.orderBy(F.col('ViolentCrimes').desc())
 	.show())
 
 
-def question_3_community_largest_population (df):
-	(df.where(F.col("population")!='?')
-	.groupBy('communityname')
-	.agg(
-		F.round(
-			F.sum(
-				F.col("population")),2)
-	.alias("Community_largest_population"))
-	.orderBy(F.col("Community_largest_population")
-	.desc())
-	.show())	
+def question_3_community_largest_population(df):
 
-def question_4_community_black_people (df):
-	(df.where(F.col("racepctblack")!='?')
-	.groupBy('communityname')
-	.agg(
-		F.round(
-			F.sum(
-				F.col("racepctblack")),2)
-	.alias("Community_black_people"))
-	.orderBy(F.col("Community_black_people")
-	.desc())
+	df = (df.withColumn('population', F.when(check_is_null('population'), 0)
+							.otherwise(F.col('population')))
+		)
+	(df.groupBy(F.col('state'), F.col('communityname'))
+	.agg(F.round(F.sum(F.col('population')), 2).alias('Community_largest_population'))
+	.orderBy(F.col('Community_largest_population').desc())
 	.show())
-	
+
+def question_4_community_black_people(df):
+
+	df = (df.withColumn('racepctblack', F.when(check_is_null('racepctblack'), 0)
+							.otherwise(F.col('racepctblack')))
+		)
+	(df.groupBy(F.col('state'), F.col('communityname'))
+	.agg(F.round(F.sum(F.col('racepctblack')), 2).alias('Community_black_people'))
+	.orderBy(F.col('Community_black_people').desc())
+	.show())
+
+def question_5_salaried_community(df):
+
+	df = (df.withColumn('pctWWage', F.when(check_is_null('pctWWage'), 0)
+								.otherwise(F.col('pctWWage')))
+		)
+	(df.groupBy(F.col('state'), F.col('communityname'))
+	.agg(F.round(F.sum(F.col('pctWWage')), 2).alias('salaried_community'))
+	.orderBy(F.col('salaried_community').desc())
+	.show())
+		
+def question_6_young_community(df):
+
+	df = (df.withColumn('agePct12t21', F.when(check_is_null('agePct12t21'), 0)
+							.otherwise(F.col('agePct12t21')))
+		)
+	(df.groupBy(F.col('state'), F.col('communityname'))
+	.agg(F.round(F.sum(F.col('agePct12t21')), 2).alias('young_between_12_21'))
+	.orderBy(F.col('young_between_12_21').desc())
+	.limit(1)
+	.show())
+
+def question_7_correlationI(df):
+   
+    df.agg(F.round(F.corr('PolicOperBudg', 'ViolentCrimesPerPop'), 2).alias('Correlation_PolicOperBudg-ViolentCrimesPerPop')).show()
+
+
+def question_8_correlationII(df):
+    
+    df.agg(F.round(F.corr('PctPolicWhite', 'PolicOperBudg'), 2).alias('Correlation_PctPolicWhite-PolicOperBudg')).show()
+
+
+def question_9_correlationIII(df):
+    
+    df.agg(F.round(F.corr('population', 'PolicOperBudg'), 2).alias('Correlation_Population-PolicOperBudg')).show()
+
+
+def question_10_correlationIV(df):
+  
+    df.agg(F.round(F.corr('population', 'ViolentCrimesPerPop'), 2).alias('Correlation_Population-ViolentCrimesPerPop')).show()
+
+def question_11_correlationV(df):
+    
+    df.agg(F.round(F.corr('medIncome', 'ViolentCrimesPerPop'), 2).alias('Correlation_medIncome-ViolentCrimesPerPop')).show()
+
+def question_12_predominant_race(df):
+   
+    (df.select('state', 'communityname', 'racepctblack', 'racePctWhite', 'racePctAsian', 'racePctHisp', 'ViolentCrimesPerPop')
+	.orderBy(F.col('ViolentCrimesPerPop').desc())
+    .limit(10)
+    .show())
+
+
 
 
 if __name__ == "__main__":
@@ -208,14 +260,20 @@ if __name__ == "__main__":
 		          .schema(schema_communities_crime)
 		          .load("/home/spark/capgemini-aceleracao-pyspark-old/data/communities-crime/communities-crime.csv"))
 
-#df.orderBy('communityname').agg({'PolicBudgPerPop': 'max'}).show()
+
+# calling previous functions #
 
 
-
-
-# checks how many null values ​​there are - considering null by the label '?'
-#df.select([count(when(col(c)=='?', c)).alias(c) for c in df.columns]).show(vertical=True)
-question_1_police_operating_budget(df)
+quantity_null(df)
+question_1_police_budget(df)
 question_2_violentcrimes_percommunity(df)
 question_3_community_largest_population(df)
 question_4_community_black_people(df)
+question_5_salaried_community(df)
+question_6_young_community(df)
+question_7_correlationI(df)
+question_8_correlationII(df)
+question_9_correlationIII(df)
+question_10_correlationIV(df)
+question_11_correlationV(df)
+question_12_predominant_race(df)
