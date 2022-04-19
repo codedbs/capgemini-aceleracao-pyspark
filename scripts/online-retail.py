@@ -286,7 +286,7 @@ if __name__ == "__main__":
 		          .format("csv")
 		          .option("header", "true")
 		          .schema(schema_online_retail)
-                  .load("/home/spark/capgemini-aceleracao-pyspark-old/data/online-retail/online-retail.csv"))
+                  .load("data/online-retail/online-retail.csv"))
     
     
 ### ---------------------------------------------- ###

@@ -258,7 +258,7 @@ if __name__ == "__main__":
 		          .format("csv")
 		          .option("header", "true")
 		          .schema(schema_communities_crime)
-		          .load("/home/spark/capgemini-aceleracao-pyspark-old/data/communities-crime/communities-crime.csv"))
+		          .load("data/communities-crime/communities-crime.csv"))
 
 
 # calling previous functions #
