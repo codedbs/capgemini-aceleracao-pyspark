@@ -1,10 +1,6 @@
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-import pyspark.sql
-
-from pyspark.sql.functions import from_unixtime, unix_timestamp,expr
-from pyspark.sql.functions import isnan, when, count, col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, TimestampType
 
 ### defining schema ###
@@ -142,7 +138,7 @@ schema_communities_crime = StructType([
 
 # checking how many null values ​​there are - considering null by the label '?'
 def quantity_null(df):
-	return df.select([count(when(col(c)=='?', c)).alias(c) for c in df.columns]).show(vertical=True)
+	return df.select([F.count(F.when(F.col(c)=='?', c)).alias(c) for c in df.columns]).show(vertical=True)
 
 ### searching null values ###
 
